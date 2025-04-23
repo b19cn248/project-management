@@ -9,7 +9,9 @@ import { createProject, getProject, updateProject } from '../../services/project
 import { ProjectCreateRequest, ProjectUpdateRequest } from '../../types/api';
 
 const ProjectForm: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    // Chỉ định rõ kiểu dữ liệu params có thể bao gồm undefined
+    const params = useParams<{ id?: string }>();
+    const id = params.id || ''; // Biến đổi thành chuỗi rỗng nếu undefined
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
 
@@ -26,7 +28,7 @@ const ProjectForm: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     // For now, we'll hardcode a user ID
-    const userUuid = '123e4567-e89b-12d3-a456-426614174000';
+    const userUuid = '550e8400-e29b-41d4-a716-446655440000';
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -36,12 +38,13 @@ const ProjectForm: React.FC = () => {
                     const response = await getProject(id);
                     const project = response.data.data;
 
+                    // Đảm bảo tất cả các trường không phải undefined
                     setFormData({
-                        name: project.name,
-                        description: project.description,
-                        start_date: project.start_date,
-                        end_date: project.end_date,
-                        status: project.status
+                        name: project.name || '',
+                        description: project.description || '',
+                        start_date: project.start_date || new Date().toISOString().split('T')[0],
+                        end_date: project.end_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        status: project.status || 'PLANNED'
                     });
                 } catch (error) {
                     console.error('Error fetching project:', error);
@@ -85,6 +88,15 @@ const ProjectForm: React.FC = () => {
         }
     };
 
+    // Đảm bảo tất cả trường trong formData có giá trị mặc định khi trống
+    const safeFormData = {
+        name: formData.name || '',
+        description: formData.description || '',
+        start_date: formData.start_date || '',
+        end_date: formData.end_date || '',
+        status: formData.status || 'PLANNED'
+    };
+
     return (
         <MainLayout title={isEditMode ? 'Edit Project' : 'Create New Project'}>
             <Card>
@@ -109,7 +121,7 @@ const ProjectForm: React.FC = () => {
                                 id="name"
                                 name="name"
                                 label="Project Name"
-                                value={formData.name}
+                                value={safeFormData.name}
                                 onChange={handleChange}
                                 required
                             />
@@ -123,7 +135,7 @@ const ProjectForm: React.FC = () => {
                                 id="description"
                                 name="description"
                                 rows={4}
-                                value={formData.description}
+                                value={safeFormData.description}
                                 onChange={handleChange}
                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             />
@@ -136,7 +148,7 @@ const ProjectForm: React.FC = () => {
                                     id="start_date"
                                     name="start_date"
                                     label="Start Date"
-                                    value={formData.start_date}
+                                    value={safeFormData.start_date}
                                     onChange={handleChange}
                                     required
                                 />
@@ -148,7 +160,7 @@ const ProjectForm: React.FC = () => {
                                     id="end_date"
                                     name="end_date"
                                     label="End Date"
-                                    value={formData.end_date}
+                                    value={safeFormData.end_date}
                                     onChange={handleChange}
                                     required
                                 />
@@ -162,7 +174,7 @@ const ProjectForm: React.FC = () => {
                             <select
                                 id="status"
                                 name="status"
-                                value={formData.status}
+                                value={safeFormData.status}
                                 onChange={handleChange}
                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                 required

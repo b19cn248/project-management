@@ -9,8 +9,21 @@ import {createTask, getTask, updateTask} from '../../services/taskService';
 import {getProjects} from '../../services/projectService';
 import {Project, TaskCreateRequest, TaskUpdateRequest} from '../../types/api';
 
+// Tạo type tạm thời bao gồm cả project_uuid cho cả form data
+type TaskFormData = {
+    title: string;
+    description: string;
+    start_date: string;
+    end_date: string;
+    priority: string;
+    status: string;
+    project_uuid: string;
+};
+
 const TaskForm: React.FC = () => {
-    const {id} = useParams<{ id: string }>();
+    // Sửa kiểu dữ liệu params và xử lý id có thể là undefined
+    const params = useParams<{ id?: string }>();
+    const id = params.id || '';
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
@@ -18,7 +31,8 @@ const TaskForm: React.FC = () => {
     // Extract project ID from URL query parameters
     const projectUuidFromQuery = searchParams.get('project') || '';
 
-    const [formData, setFormData] = useState<TaskCreateRequest | TaskUpdateRequest>({
+    // Sử dụng type TaskFormData để tránh lỗi về project_uuid
+    const [formData, setFormData] = useState<TaskFormData>({
         title: '',
         description: '',
         start_date: new Date().toISOString().split('T')[0],
@@ -34,7 +48,7 @@ const TaskForm: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     // For now, we'll hardcode a user ID
-    const userUuid = '123e4567-e89b-12d3-a456-426614174000';
+    const userUuid = '550e8400-e29b-41d4-a716-446655440000';
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -57,14 +71,15 @@ const TaskForm: React.FC = () => {
                     const response = await getTask(id);
                     const task = response.data.data;
 
+                    // Đảm bảo tất cả trường có giá trị mặc định nếu undefined
                     setFormData({
-                        title: task.title,
-                        description: task.description,
-                        start_date: task.start_date,
-                        end_date: task.end_date,
-                        priority: task.priority,
-                        status: task.status,
-                        project_uuid: task.project_uuid
+                        title: task.title || '',
+                        description: task.description || '',
+                        start_date: task.start_date || new Date().toISOString().split('T')[0],
+                        end_date: task.end_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        priority: task.priority || 'MEDIUM',
+                        status: task.status || 'PENDING',
+                        project_uuid: task.project_uuid || ''
                     });
                 } catch (error) {
                     console.error('Error fetching task:', error);
@@ -104,9 +119,11 @@ const TaskForm: React.FC = () => {
             setSubmitLoading(true);
 
             if (isEditMode && id) {
-                const {project_uuid, ...updateData} = formData as TaskUpdateRequest;
-                await updateTask(id, updateData);
+                // Loại bỏ project_uuid vì TaskUpdateRequest không có trường này
+                const {project_uuid, ...updateData} = formData;
+                await updateTask(id, updateData as TaskUpdateRequest);
             } else {
+                // Sử dụng toàn bộ formData cho TaskCreateRequest
                 await createTask(formData as TaskCreateRequest);
             }
 
@@ -122,6 +139,17 @@ const TaskForm: React.FC = () => {
         } finally {
             setSubmitLoading(false);
         }
+    };
+
+    // Đảm bảo tất cả trường trong formData có giá trị mặc định khi trống
+    const safeFormData = {
+        title: formData.title || '',
+        description: formData.description || '',
+        start_date: formData.start_date || '',
+        end_date: formData.end_date || '',
+        priority: formData.priority || 'MEDIUM',
+        status: formData.status || 'PENDING',
+        project_uuid: formData.project_uuid || ''
     };
 
     return (
@@ -148,7 +176,7 @@ const TaskForm: React.FC = () => {
                                 id="title"
                                 name="title"
                                 label="Task Title"
-                                value={formData.title}
+                                value={safeFormData.title}
                                 onChange={handleChange}
                                 required
                             />
@@ -162,7 +190,7 @@ const TaskForm: React.FC = () => {
                                 id="description"
                                 name="description"
                                 rows={4}
-                                value={formData.description}
+                                value={safeFormData.description}
                                 onChange={handleChange}
                                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                             />
@@ -175,7 +203,7 @@ const TaskForm: React.FC = () => {
                                     id="start_date"
                                     name="start_date"
                                     label="Start Date"
-                                    value={formData.start_date}
+                                    value={safeFormData.start_date}
                                     onChange={handleChange}
                                     required
                                 />
@@ -187,7 +215,7 @@ const TaskForm: React.FC = () => {
                                     id="end_date"
                                     name="end_date"
                                     label="Due Date"
-                                    value={formData.end_date}
+                                    value={safeFormData.end_date}
                                     onChange={handleChange}
                                     required
                                 />
@@ -202,7 +230,7 @@ const TaskForm: React.FC = () => {
                                 <select
                                     id="project_uuid"
                                     name="project_uuid"
-                                    value={formData.project_uuid}
+                                    value={safeFormData.project_uuid}
                                     onChange={handleChange}
                                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     required
@@ -224,7 +252,7 @@ const TaskForm: React.FC = () => {
                                 <select
                                     id="priority"
                                     name="priority"
-                                    value={formData.priority}
+                                    value={safeFormData.priority}
                                     onChange={handleChange}
                                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     required
@@ -236,14 +264,13 @@ const TaskForm: React.FC = () => {
                             </div>
 
                             <div>
-                                // src/pages/tasks/TaskForm.tsx (continued)
                                 <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                                     Status
                                 </label>
                                 <select
                                     id="status"
                                     name="status"
-                                    value={formData.status}
+                                    value={safeFormData.status}
                                     onChange={handleChange}
                                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     required

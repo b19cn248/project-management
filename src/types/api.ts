@@ -105,6 +105,7 @@ export interface TaskUpdateRequest {
     end_date?: string;
     priority?: string;
     status?: string;
+    project_uuid: string;
 }
 
 // Time Type

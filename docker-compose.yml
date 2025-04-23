@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  project-management-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3007:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules  # Persist node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true  # Optional: for hot reloading
+    env_file:
+      - .env
+    networks:
+      - olh_news_network  # Thêm service vào mạng olh_news
+
+networks:
+  olh_news_network:
+    name: olh_news_network
+    external: true

@@ -10,7 +10,9 @@ import { getHighPriorityTasks } from '../../services/taskService';
 import { ScheduleCreateRequest, ScheduleUpdateRequest, Task } from '../../types/api';
 
 const ScheduleForm: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    // Sửa kiểu dữ liệu cho params và xử lý id có thể là undefined
+    const params = useParams<{ id?: string }>();
+    const id = params.id || '';
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
 
@@ -29,7 +31,7 @@ const ScheduleForm: React.FC = () => {
     const [scheduleType, setScheduleType] = useState<'task' | 'meeting' | 'free'>('task');
 
     // For now, we'll hardcode a user ID
-    const userUuid = '123e4567-e89b-12d3-a456-426614174000';
+    const userUuid = '550e8400-e29b-41d4-a716-446655440000';
 
     useEffect(() => {
         const fetchTasks = async () => {
@@ -52,12 +54,13 @@ const ScheduleForm: React.FC = () => {
                     const response = await getSchedule(id);
                     const schedule = response.data.data;
 
+                    // Đảm bảo tất cả giá trị có giá trị mặc định nếu là undefined
                     setFormData({
-                        schedule_date: schedule.schedule_date,
-                        start_time: schedule.start_time,
-                        end_time: schedule.end_time,
-                        task_uuid: schedule.task_uuid,
-                        meeting_uuid: schedule.meeting_uuid
+                        schedule_date: schedule.schedule_date || new Date().toISOString().split('T')[0],
+                        start_time: schedule.start_time || { hour: 9, minute: 0, second: 0, nano: 0 },
+                        end_time: schedule.end_time || { hour: 10, minute: 0, second: 0, nano: 0 },
+                        task_uuid: schedule.task_uuid || '',
+                        meeting_uuid: schedule.meeting_uuid || ''
                     });
 
                     if (schedule.task_uuid) {
@@ -139,6 +142,15 @@ const ScheduleForm: React.FC = () => {
         }
     };
 
+    // Đảm bảo tất cả trường trong formData có giá trị mặc định khi trống
+    const safeFormData = {
+        schedule_date: formData.schedule_date || new Date().toISOString().split('T')[0],
+        start_time: formData.start_time || { hour: 9, minute: 0, second: 0, nano: 0 },
+        end_time: formData.end_time || { hour: 10, minute: 0, second: 0, nano: 0 },
+        task_uuid: formData.task_uuid || '',
+        meeting_uuid: formData.meeting_uuid || ''
+    };
+
     return (
         <MainLayout title={isEditMode ? 'Edit Schedule' : 'Create New Schedule'}>
             <Card>
@@ -164,7 +176,7 @@ const ScheduleForm: React.FC = () => {
                                 id="schedule_date"
                                 name="schedule_date"
                                 label="Date"
-                                value={formData.schedule_date}
+                                value={safeFormData.schedule_date}
                                 onChange={handleChange}
                                 required
                             />
@@ -179,7 +191,7 @@ const ScheduleForm: React.FC = () => {
                                     type="time"
                                     id="start_time"
                                     name="start_time"
-                                    value={formatTimeForInput(formData.start_time)}
+                                    value={formatTimeForInput(safeFormData.start_time)}
                                     onChange={handleTimeChange}
                                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     required
@@ -194,7 +206,7 @@ const ScheduleForm: React.FC = () => {
                                     type="time"
                                     id="end_time"
                                     name="end_time"
-                                    value={formatTimeForInput(formData.end_time)}
+                                    value={formatTimeForInput(safeFormData.end_time)}
                                     onChange={handleTimeChange}
                                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     required
@@ -225,7 +237,6 @@ const ScheduleForm: React.FC = () => {
                                     />
                                     <span className="ml-2">Meeting</span>
                                 </label>
-                                // src/pages/schedules/ScheduleForm.tsx (continued)
                                 <label className="inline-flex items-center">
                                     <input
                                         type="radio"
@@ -246,7 +257,7 @@ const ScheduleForm: React.FC = () => {
                                 <select
                                     id="task_uuid"
                                     name="task_uuid"
-                                    value={formData.task_uuid}
+                                    value={safeFormData.task_uuid}
                                     onChange={handleChange}
                                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     required={scheduleType === 'task'}

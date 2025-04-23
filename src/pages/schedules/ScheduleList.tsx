@@ -12,7 +12,7 @@ const ScheduleList: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
 
     // For now, we'll hardcode a user ID
-    const userUuid = '123e4567-e89b-12d3-a456-426614174000';
+    const userUuid = '550e8400-e29b-41d4-a716-446655440000';
 
     // Default date range is the current week
     const today = new Date();
