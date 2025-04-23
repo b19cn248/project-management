@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create an axios instance with common configuration
 const apiClient = axios.create({
-    baseURL: 'http://localhost:8080/api',
+    baseURL: 'https://api.project.management.openlearnhub.io.vn/api',
     headers: {
         'Content-Type': 'application/json',
     },
