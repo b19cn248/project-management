@@ -1,6 +1,6 @@
 // src/router.tsx
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom';
 
 // Import page components
 import Dashboard from './pages/dashboard/Dashboard';
@@ -19,43 +19,51 @@ import ScheduleForm from './pages/schedules/ScheduleForm';
 import FileList from './pages/files/FileList';
 import FileDetail from './pages/files/FileDetail';
 
+// Import error pages
+import NotFound from './pages/errors/NotFound';
+import ServerError from './pages/errors/ServerError';
+
+// Import setting pages
+
 const AppRouter: React.FC = () => {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
+                <Route path="/dashboard" element={<Dashboard/>}/>
 
                 {/* Project routes */}
-                <Route path="/projects" element={<ProjectList />} />
-                <Route path="/projects/new" element={<ProjectForm />} />
-                <Route path="/projects/:id" element={<ProjectDetail />} />
-                <Route path="/projects/:id/edit" element={<ProjectForm />} />
+                <Route path="/projects" element={<ProjectList/>}/>
+                <Route path="/projects/new" element={<ProjectForm/>}/>
+                <Route path="/projects/:id" element={<ProjectDetail/>}/>
+                <Route path="/projects/:id/edit" element={<ProjectForm/>}/>
+                <Route path="/projects/:id/tasks" element={<TaskList/>}/>
 
                 {/* Task routes */}
-                <Route path="/tasks" element={<TaskList />} />
-                <Route path="/tasks/new" element={<TaskForm />} />
-                <Route path="/tasks/:id" element={<TaskDetail />} />
-                <Route path="/tasks/:id/edit" element={<TaskForm />} />
+                <Route path="/tasks" element={<TaskList/>}/>
+                <Route path="/tasks/new" element={<TaskForm/>}/>
+                <Route path="/tasks/:id" element={<TaskDetail/>}/>
+                <Route path="/tasks/:id/edit" element={<TaskForm/>}/>
 
                 {/* Meeting routes */}
-                <Route path="/meetings" element={<MeetingList />} />
-                <Route path="/meetings/new" element={<MeetingForm />} />
-                <Route path="/meetings/:id" element={<MeetingDetail />} />
-                <Route path="/meetings/:id/edit" element={<MeetingForm />} />
+                <Route path="/meetings" element={<MeetingList/>}/>
+                <Route path="/meetings/new" element={<MeetingForm/>}/>
+                <Route path="/meetings/:id" element={<MeetingDetail/>}/>
+                <Route path="/meetings/:id/edit" element={<MeetingForm/>}/>
 
                 {/* Schedule routes */}
-                <Route path="/schedules" element={<ScheduleList />} />
-                <Route path="/schedules/new" element={<ScheduleForm />} />
-                <Route path="/schedules/:id" element={<ScheduleDetail />} />
-                <Route path="/schedules/:id/edit" element={<ScheduleForm />} />
+                <Route path="/schedules" element={<ScheduleList/>}/>
+                <Route path="/schedules/new" element={<ScheduleForm/>}/>
+                <Route path="/schedules/:id" element={<ScheduleDetail/>}/>
+                <Route path="/schedules/:id/edit" element={<ScheduleForm/>}/>
 
                 {/* File routes */}
-                <Route path="/files" element={<FileList />} />
-                <Route path="/files/:id" element={<FileDetail />} />
+                <Route path="/files" element={<FileList/>}/>
+                <Route path="/files/:id" element={<FileDetail/>}/>
 
-                {/* Catch-all route for 404 */}
-                <Route path="*" element={<div>Page Not Found</div>} />
+                {/* Error routes */}
+                <Route path="/error/500" element={<ServerError/>}/>
+                <Route path="*" element={<NotFound/>}/>
             </Routes>
         </BrowserRouter>
     );

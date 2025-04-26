@@ -4,15 +4,19 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
+import { Loading, Error } from '../../components/common/LoadingError';
+import { useToast } from '../../components/common/Toast';
 import { getTask, deleteTask, updateTask } from '../../services/taskService';
 import { Task } from '../../types/api';
 
 const TaskDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { addToast } = useToast();
 
     const [task, setTask] = useState<Task | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
     const [statusUpdateLoading, setStatusUpdateLoading] = useState<boolean>(false);
@@ -23,10 +27,12 @@ const TaskDetail: React.FC = () => {
 
             try {
                 setLoading(true);
+                setError(null);
                 const response = await getTask(id);
                 setTask(response.data.data);
             } catch (error) {
                 console.error('Error fetching task:', error);
+                setError('Failed to load task data. Please try again.');
             } finally {
                 setLoading(false);
             }
@@ -42,6 +48,12 @@ const TaskDetail: React.FC = () => {
             setDeleteLoading(true);
             await deleteTask(id);
 
+            addToast({
+                type: 'success',
+                title: 'Task deleted successfully',
+                duration: 3000
+            });
+
             // Navigate to project or tasks page
             if (task?.project_uuid) {
                 navigate(`/projects/${task.project_uuid}`);
@@ -52,6 +64,13 @@ const TaskDetail: React.FC = () => {
             console.error('Error deleting task:', error);
             setDeleteLoading(false);
             setDeleteModalOpen(false);
+
+            addToast({
+                type: 'error',
+                title: 'Failed to delete task',
+                message: 'Please try again later.',
+                duration: 5000
+            });
         }
     };
 
@@ -68,8 +87,22 @@ const TaskDetail: React.FC = () => {
             // Refresh the task data
             const response = await getTask(id);
             setTask(response.data.data);
+
+            addToast({
+                type: 'success',
+                title: 'Status updated',
+                message: `Task status updated to ${newStatus.toLowerCase().replace('_', ' ')}.`,
+                duration: 3000
+            });
         } catch (error) {
             console.error('Error updating task status:', error);
+
+            addToast({
+                type: 'error',
+                title: 'Failed to update status',
+                message: 'Please try again later.',
+                duration: 5000
+            });
         } finally {
             setStatusUpdateLoading(false);
         }
@@ -98,7 +131,7 @@ const TaskDetail: React.FC = () => {
     const getDueStatus = (endDate: string) => {
         const days = calculateDaysRemaining(endDate);
 
-        if (days < 0) return { text: `Overdue by ${Math.abs(days)} days`, class: 'text-red-600 font-medium' };
+        if (days < 0) return { text: `Overdue by ${Math.abs(days)} day${Math.abs(days) !== 1 ? 's' : ''}`, class: 'text-red-600 font-medium' };
         if (days === 0) return { text: 'Due today', class: 'text-orange-600 font-medium' };
         if (days === 1) return { text: 'Due tomorrow', class: 'text-yellow-600' };
         if (days <= 3) return { text: `Due in ${days} days`, class: 'text-yellow-600' };
@@ -144,12 +177,20 @@ const TaskDetail: React.FC = () => {
     if (loading) {
         return (
             <MainLayout title="Task Detail">
-                <div className="flex justify-center items-center h-64">
-                    <div className="animate-pulse flex flex-col items-center">
-                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="mt-4 text-gray-600">Loading task data...</p>
-                    </div>
-                </div>
+                <Loading message="Loading task data..." />
+            </MainLayout>
+        );
+    }
+
+    if (error) {
+        return (
+            <MainLayout title="Error">
+                <Error
+                    title="Error Loading Task"
+                    message={error}
+                    showRetry={true}
+                    onRetry={() => window.location.reload()}
+                />
             </MainLayout>
         );
     }
@@ -176,33 +217,35 @@ const TaskDetail: React.FC = () => {
     return (
         <MainLayout title={task.title}>
             {/* Task Header */}
-            <div className="mb-6 bg-white rounded-lg shadow-sm p-5">
+            <div className="mb-6 bg-white rounded-lg shadow-sm p-4 sm:p-5">
                 <div className="sm:flex sm:items-center sm:justify-between">
                     <div className="mb-4 sm:mb-0">
                         <div className="flex items-center">
-                            <h1 className="text-2xl font-bold text-gray-900">{task.title}</h1>
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{task.title}</h1>
                         </div>
                         <p className="mt-1 text-sm text-gray-500">
                             Created on {formatDate(task.created_at)}
                         </p>
                     </div>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
                         <Link to={`/tasks/${id}/edit`}>
-                            <Button variant="secondary">
+                            <Button variant="secondary" size="sm" className="w-full sm:w-auto">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                                 </svg>
-                                Edit Task
+                                Edit
                             </Button>
                         </Link>
                         <Button
                             variant="danger"
+                            size="sm"
                             onClick={() => setDeleteModalOpen(true)}
+                            className="w-full sm:w-auto"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>
-                            Delete Task
+                            Delete
                         </Button>
                     </div>
                 </div>
@@ -210,7 +253,7 @@ const TaskDetail: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 space-y-6">
                     <Card title="Task Details">
                         {/* Status and Priority Badges */}
                         <div className="flex flex-wrap gap-3 mb-5">
@@ -221,7 +264,7 @@ const TaskDetail: React.FC = () => {
                         {/* Task Description */}
                         <div className="prose max-w-none border-b border-gray-200 pb-5">
                             <h3 className="text-lg font-medium text-gray-900 mb-3">Description</h3>
-                            <p className="text-gray-700 leading-relaxed">
+                            <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                                 {task.description || 'No description provided.'}
                             </p>
                         </div>
@@ -263,55 +306,82 @@ const TaskDetail: React.FC = () => {
                         <div className="mt-5">
                             <h3 className="text-lg font-medium text-gray-900 mb-3">Update Status</h3>
                             {statusUpdateLoading ? (
-                                <div className="flex items-center text-blue-600">
-                                    <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <div className="flex items-center justify-center py-6 text-blue-600">
+                                    <svg className="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                     Updating status...
                                 </div>
                             ) : (
-                                <div className="flex flex-wrap gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                    <Button
-                                        size="sm"
-                                        variant={task.status === 'PENDING' ? 'primary' : 'secondary'}
-                                        onClick={() => handleStatusChange('PENDING')}
-                                        disabled={task.status === 'PENDING'}
-                                        className="flex items-center"
-                                    >
-                                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Mark as Pending
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant={task.status === 'IN_PROGRESS' ? 'primary' : 'secondary'}
-                                        onClick={() => handleStatusChange('IN_PROGRESS')}
-                                        disabled={task.status === 'IN_PROGRESS'}
-                                        className="flex items-center"
-                                    >
-                                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                        </svg>
-                                        Mark as In Progress
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant={task.status === 'COMPLETED' ? 'success' : 'secondary'}
-                                        onClick={() => handleStatusChange('COMPLETED')}
-                                        disabled={task.status === 'COMPLETED'}
-                                        className="flex items-center"
-                                    >
-                                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        Mark as Completed
-                                    </Button>
+                                <div className="bg-gray-50 rounded-lg border border-gray-100 p-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <Button
+                                            size="sm"
+                                            variant={task.status === 'PENDING' ? 'primary' : 'outline'}
+                                            onClick={() => handleStatusChange('PENDING')}
+                                            disabled={task.status === 'PENDING'}
+                                            className="flex items-center justify-center"
+                                            fullWidth
+                                        >
+                                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            Pending
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant={task.status === 'IN_PROGRESS' ? 'primary' : 'outline'}
+                                            onClick={() => handleStatusChange('IN_PROGRESS')}
+                                            disabled={task.status === 'IN_PROGRESS'}
+                                            className="flex items-center justify-center"
+                                            fullWidth
+                                        >
+                                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                            </svg>
+                                            In Progress
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant={task.status === 'COMPLETED' ? 'success' : 'outline'}
+                                            onClick={() => handleStatusChange('COMPLETED')}
+                                            disabled={task.status === 'COMPLETED'}
+                                            className="flex items-center justify-center"
+                                            fullWidth
+                                        >
+                                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            Completed
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </div>
                     </Card>
+
+                    {/* Comments Section - Mobile Only */}
+                    <div className="lg:hidden">
+                        <Card title="Comments">
+                            <div className="flex flex-col space-y-4">
+                                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                    <textarea
+                                        className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        rows={3}
+                                        placeholder="Add a comment..."
+                                    ></textarea>
+                                    <div className="mt-2 flex justify-end">
+                                        <Button size="sm">Add Comment</Button>
+                                    </div>
+                                </div>
+
+                                <div className="text-center py-6 text-gray-500">
+                                    No comments yet. Be the first to comment!
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                 </div>
 
                 {/* Right Column */}
@@ -340,6 +410,32 @@ const TaskDetail: React.FC = () => {
                                 <div className="mt-1">
                                     {renderStatusBadge(task.status)}
                                 </div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Attachments Section */}
+                    <Card title="Attachments">
+                        <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                            <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p className="text-gray-500 mb-3">No files attached</p>
+                            <div>
+                                <label htmlFor="file-upload" className="inline-block cursor-pointer">
+                                    <Button size="sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                        Upload File
+                                    </Button>
+                                    <input
+                                        id="file-upload"
+                                        name="file-upload"
+                                        type="file"
+                                        className="sr-only"
+                                    />
+                                </label>
                             </div>
                         </div>
                     </Card>
@@ -388,32 +484,38 @@ const TaskDetail: React.FC = () => {
                         </div>
                     </Card>
 
-                    {/* Files Section */}
-                    <Card title="Files">
-                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                            <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <p className="text-gray-500 mb-3">No files attached</p>
-                            <Button size="sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                </svg>
-                                Upload File
-                            </Button>
-                        </div>
-                    </Card>
+                    {/* Comments Section - Desktop Only */}
+                    <div className="hidden lg:block">
+                        <Card title="Comments">
+                            <div className="flex flex-col space-y-4">
+                                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                    <textarea
+                                        className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        rows={3}
+                                        placeholder="Add a comment..."
+                                    ></textarea>
+                                    <div className="mt-2 flex justify-end">
+                                        <Button size="sm">Add Comment</Button>
+                                    </div>
+                                </div>
+
+                                <div className="text-center py-6 text-gray-500">
+                                    No comments yet. Be the first to comment!
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                 </div>
             </div>
 
             {/* Delete Confirmation Modal */}
             {deleteModalOpen && (
-                <div className="fixed inset-0 z-10 overflow-y-auto">
+                <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
                     <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                            <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-                        </div>
+                        {/* Background overlay */}
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
 
+                        {/* Modal panel */}
                         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
@@ -436,31 +538,16 @@ const TaskDetail: React.FC = () => {
                                 <Button
                                     variant="danger"
                                     onClick={handleDelete}
-                                    disabled={deleteLoading}
-                                    className="sm:ml-3"
+                                    loading={deleteLoading}
+                                    className="sm:ml-3 w-full sm:w-auto"
                                 >
-                                    {deleteLoading ? (
-                                        <span className="flex items-center">
-                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Deleting...
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center">
-                                            <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                            </svg>
-                                            Delete
-                                        </span>
-                                    )}
+                                    Delete
                                 </Button>
                                 <Button
-                                    variant="secondary"
+                                    variant="outline"
                                     onClick={() => setDeleteModalOpen(false)}
                                     disabled={deleteLoading}
-                                    className="mt-3 sm:mt-0"
+                                    className="mt-3 sm:mt-0 w-full sm:w-auto"
                                 >
                                     Cancel
                                 </Button>
